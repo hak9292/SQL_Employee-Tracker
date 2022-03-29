@@ -40,7 +40,7 @@ const initialQuestion = [
         ]
     }
 ]
-const addRoleQuestions = [
+let addRoleQuestions = [
     {
         name: 'roleName',
         message: 'What is the name of the role?'
@@ -54,7 +54,6 @@ const addRoleQuestions = [
         name: 'roleDepartment',
         message: 'Which department does the role belong to?',
         choices: []
-
     }
 ]
 // if (answer.first3 char is add) {
@@ -140,6 +139,21 @@ const addDepartment = () => {
 }
 
 const addRole = () => {
+    db.query(`SELECT * FROM department`, (err, results) => {
+        console.log(addRoleQuestions[2].choices)
+        // if (addRoleQuestions[2].choices.length != 0) {
+        //     addRoleQuestions[2].choices.splice(0);
+        // }
+        console.log(addRoleQuestions[2].choices);
+        console.log(results.length);
+        // console.log(results[i].name);
+        let roleChoices = [];
+        
+        for (i = 0; i < results.length; i ++) {
+            roleChoices.push(results[i].name);
+        }
+    
+    addRoleQuestions[2].choices = addRoleQuestions[2].choices.concat(roleChoices);
     inquirer
         .prompt(addRoleQuestions)
         .then((answers) => {
@@ -150,9 +164,39 @@ const addRole = () => {
                 console.log(`Added ${params} to the database.`);
             });
         })
-    init();
+    });
 }
 
+const addEmployee = () => {
+    db.query(`SELECT * FROM role`, (err, results) => {
+        console.log(addRoleQuestions[2].choices)
+        // if (addRoleQuestions[2].choices.length != 0) {
+        //     addRoleQuestions[2].choices.splice(0);
+        // }
+        console.log(addRoleQuestions[2].choices);
+        console.log(results.length);
+        // console.log(results[i].name);
+        let roleChoices = [];
+        
+        for (i = 0; i < results.length; i ++) {
+            roleChoices.push(results[i].name);
+        }
+    
+    addRoleQuestions[2].choices = addRoleQuestions[2].choices.concat(roleChoices);
+    inquirer
+        .prompt(addRoleQuestions)
+        .then((answers) => {
+            const sql = `INSERT INTO role (title, salary, department_id)
+            VALUES (?)`;
+            const params = [answers.roleName, answers.roleSalary, answers.roleDepartment]
+            db.query(sql, params, (err, results) => {
+                console.log(`Added ${params} to the database.`);
+            });
+        })
+    });
+}
+
+init();
 
 // add
 // const addNew = (tableName, tableParams) => {
