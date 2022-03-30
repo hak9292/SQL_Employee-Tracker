@@ -82,6 +82,22 @@ let addEmployeeQuestions = [
     }
 ]
 
+let updateRoleQuestions = [
+    {
+        type: 'list',
+        name: 'employee',
+        message: "Which employee's role do you want to update?",
+        choices: []
+    },
+    {
+        type: 'list',
+        name: 'role',
+        message: 'Which role do you want to assign the selected employee?',
+        choices: []
+    },
+
+]
+
 const init = () => {
     inquirer
         .prompt(initialQuestion)
@@ -202,6 +218,7 @@ const addRole = () => {
 }
 
 const addEmployee = () => {
+    // adding current list of roles to the addEmployeeQuestions array
     db.query(`SELECT * FROM role`, (err, results) => {
         let roleNames = [];
         for (i = 0; i < results.length; i++) {
@@ -209,7 +226,7 @@ const addEmployee = () => {
         }
         addEmployeeQuestions[2].choices = addEmployeeQuestions[2].choices.concat(roleNames);
     });
-
+    // adding current list of employees to the addEmployeeQuestion array
     db.query(`SELECT * FROM employee`, (err, results) => {
         let managerChoices = [];
         for (i = 0; i < results.length; i++) {
@@ -219,24 +236,27 @@ const addEmployee = () => {
         addEmployeeQuestions[3].choices = addEmployeeQuestions[3].choices.concat(managerChoices);
     });
 
+    // prompt quesstions
     inquirer
         .prompt(addEmployeeQuestions)
         .then((answers) => {
+            // retrieve role table
             db.query(`SELECT * FROM role`, (err, results) => {
                 for (i = 0; i < results.length; i++) {
-                    if (err) {
-                        console.log(err);
-                    }
+                    // if user's selected role === role table's looped title
                     if (answers.employeeRole === results[i].title) {
+                        // assign the id value of the role table's looped selected title
                         answers.employeeRole = results[i].id;
+                        // retrieve the employee table
                         db.query(`SELECT * FROM employee`, (err, results) => {
+                            // loop through to concatenated first and last name
                             for (i = 0; i < results.length; i++) {
                                 let fullName = results[i].first_name.concat(` ${results[i].last_name}`);
-                                if (err) {
-                                    console.log(err);
-                                }
+                                // loop through to see which user choice matches the concatenated name, assigned to "fullName"
                                 if (answers.employeeManager === fullName) {
+                                    // assign the id value of the employee table's looped selected name to its respective employee ID
                                     answers.employeeManager = results[i].id;
+                                    // sql statement to insert a new employee
                                     const sql = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
                                     VALUES (?, ?, ?, ?)`;
                                     const params = [answers.employeeFirstName, answers.employeeLastName, answers.employeeRole, answers.employeeManager]
@@ -246,11 +266,61 @@ const addEmployee = () => {
                                     });
                                 }
                             }
-                        })
+                        });
                     }
                 }
             })
         })
+}
+
+const updateRole = () => {
+    // adding current list of employees to the addEmployeeQuestion array
+    db.query(`SELECT * FROM employee`, (err, results) => {
+        let employeeChoices = [];
+        for (i = 0; i < results.length; i++) {
+            let fullName = results[i].first_name.concat(` ${results[i].last_name}`);
+            employeeChoices.push(fullName);
+        }
+        updateRoleQuestions[0].choices = updateRoleQuestions[0].choices.concat(employeeChoices);
+    });
+
+    db.query(`SELECT * FROM role`, (err, results) => {
+        let roleNames = [];
+        for (i = 0; i < results.length; i++) {
+            roleNames.push(results[i].title);
+        }
+        updateRoleQuestions[1].choices = updateRoleQuestions[1].choices.concat(roleNames);
+
+
+    inquirer
+        .prompt(updateRoleQuestions)
+        .then((answers) => {
+            db.query(`SELECT * FROM employee`, (err, results) => {
+                for (i = 0; i < results.length; i++) {
+                    let fullName = results[i].first_name.concat(` ${results[i].last_name}`);
+                    if (answers.employee === fullName) {
+                        answers.employee = results[i].id;
+
+                        db.query(`SELECT * FROM role`, (err, results) => {
+                            for (i = 0; i < results.length; i++) {
+                                if (answers.role === results[i].title) {
+                                    answers.role = results[i].id;
+                                    const sql = `UPDATE employee SET role_id = ? WHERE id = ?`;
+                                    const params = [answers.role, answers.employee];
+                                    db.query(sql, params, (err, result) => {
+                                        if (err) {
+                                            res.status(400).json({ error: err.message });
+                                        }
+                                        init();
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        })
+    });
 }
 
 init();
