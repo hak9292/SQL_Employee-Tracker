@@ -46,6 +46,7 @@ let addRoleQuestions = [
         message: 'What is the name of the role?'
     },
     {
+        type: 'number',
         name: 'roleSalary',
         message: 'What is the salary of the role?'
     },
@@ -53,6 +54,29 @@ let addRoleQuestions = [
         type: 'list',
         name: 'roleDepartment',
         message: 'Which department does the role belong to?',
+        choices: []
+    }
+]
+
+let addEmployeeQuestions = [
+    {
+        name: 'employeeFirstName',
+        message: "What is the employee's first name?"
+    },
+    {
+        name: 'employeeLastName',
+        message: "What is the employee's last name?"
+    },
+    {
+        type: 'list',
+        name: 'employeeRole',
+        message: "What is the employee's role?",
+        choices: []
+    },
+    {
+        type: 'list',
+        name: 'employeeManager',
+        message: "Who is the employee's manager?",
         choices: []
     }
 ]
@@ -103,22 +127,22 @@ init = () => {
 const viewDepartments = () => {
     db.query(`SELECT * FROM department`, (err, results) => {
         console.table('All departments', results);
+        init();
     });
-    init();
 }
 
 const viewRoles = () => {
     db.query(`SELECT * FROM role`, (err, results) => {
         console.table('All roles', results);
+        init();
     });
-    init();
 }
 
 const viewEmployees = () => {
     db.query(`SELECT * FROM employee`, (err, results) => {
         console.table('All employees', results);
+        init();
     });
-    init();
 }
 
 const addDepartment = () => {
@@ -133,70 +157,105 @@ const addDepartment = () => {
             const params = [answers.departmentName];
             db.query(sql, params, (err, results) => {
                 console.log(`Added ${answers.departmentName} to the database.`);
+                init();
             });
         })
-    init();
 }
 
 const addRole = () => {
+    // adding current, updated departments to the questions
     db.query(`SELECT * FROM department`, (err, results) => {
-        console.log(addRoleQuestions[2].choices)
-        // if (addRoleQuestions[2].choices.length != 0) {
-        //     addRoleQuestions[2].choices.splice(0);
-        // }
-        console.log(addRoleQuestions[2].choices);
-        console.log(results.length);
-        // console.log(results[i].name);
-        let roleChoices = [];
-        
-        for (i = 0; i < results.length; i ++) {
-            roleChoices.push(results[i].name);
+        let departmentChoices = [];
+        for (i = 0; i < results.length; i++) {
+            departmentChoices.push(results[i].name);
         }
-    
-    addRoleQuestions[2].choices = addRoleQuestions[2].choices.concat(roleChoices);
+        addRoleQuestions[2].choices = addRoleQuestions[2].choices.concat(departmentChoices);
+    });
     inquirer
         .prompt(addRoleQuestions)
         .then((answers) => {
-            const sql = `INSERT INTO role (title, salary, department_id)
-            VALUES (?)`;
-            const params = [answers.roleName, answers.roleSalary, answers.roleDepartment]
-            db.query(sql, params, (err, results) => {
-                console.log(`Added ${params} to the database.`);
+            db.query(`SELECT * FROM department`, (err, results) => {
+                for (i = 0; i < results.length; i++) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    if (answers.roleDepartment === results[i].name) {
+                        answers.roleDepartment = results[i].id;
+                        const sql = `INSERT INTO role (title, salary, department_id)
+                        VALUES (?, ?, ?)`;
+                        let params = [answers.roleName, answers.roleSalary, answers.roleDepartment];
+                        db.query(sql, params, (err, results) => {
+                            if (err) {
+                                console.log(err);
+                            }
+                            console.log(`Added ${params} to the database.`);
+                            console.log(params);
+                            init();
+                        });
+                    }
+                }
             });
+
+
+
         })
-    });
+
 }
 
 const addEmployee = () => {
     db.query(`SELECT * FROM role`, (err, results) => {
-        console.log(addRoleQuestions[2].choices)
-        // if (addRoleQuestions[2].choices.length != 0) {
-        //     addRoleQuestions[2].choices.splice(0);
-        // }
-        console.log(addRoleQuestions[2].choices);
-        console.log(results.length);
-        // console.log(results[i].name);
-        let roleChoices = [];
-        
-        for (i = 0; i < results.length; i ++) {
-            roleChoices.push(results[i].name);
+        let roleNames = [];
+        for (i = 0; i < results.length; i++) {
+            roleNames.push(results[i].title);
         }
-    
-    addRoleQuestions[2].choices = addRoleQuestions[2].choices.concat(roleChoices);
-    inquirer
-        .prompt(addRoleQuestions)
-        .then((answers) => {
-            const sql = `INSERT INTO role (title, salary, department_id)
-            VALUES (?)`;
-            const params = [answers.roleName, answers.roleSalary, answers.roleDepartment]
-            db.query(sql, params, (err, results) => {
-                console.log(`Added ${params} to the database.`);
-            });
-        })
+        addEmployeeQuestions[2].choices = addEmployeeQuestions[2].choices.concat(roleNames);
     });
+    db.query(`SELECT * FROM employee`, (err, results) => {
+        let managerChoices = [];
+        for (i = 0; i < results.length; i++) {
+            let fullName = results[i].first_name.concat(` ${results[i].last_name}`);
+            managerChoices.push(fullName);
+        }
+        addEmployeeQuestions[3].choices = addEmployeeQuestions[3].choices.concat(managerChoices);
+    });
+    inquirer
+        .prompt(addEmployeeQuestions)
+        .then((answers) => {
+            db.query(`SELECT * FROM role`, (err, results) => {
+                for (i = 0; i < results.length; i++) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    if (answers.employeeRole === results[i].title) {
+                        answers.employeeRole = results[i].id;
+                        db.query(`SELECT * FROM employee`, (err, results) => {
+                            for (i = 0; i < results.length; i++) {
+                                let fullName = results[i].first_name.concat(` ${results[i].last_name}`);
+                                if (err) {
+                                    console.log(err);
+                                }
+                                if (answers.employeeManager === fullName) {
+                                    answers.employeeManager = results[i].id;
+                                    const sql = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                                    VALUES (?, ?, ?, ?)`;
+                                    const params = [answers.employeeFirstName, answers.employeeLastName, answers.employeeRole, answers.employeeManager]
+                                    db.query(sql, params, (err, results) => {
+                                        console.log(`Added ${params} to the database.`);
+                                    });
+                                }
+                            }
+                        })
+                    }
+                }
+
+            })
+
+        })
+
+
 }
 
-init();
+// init();
 
 // add
 // const addNew = (tableName, tableParams) => {
