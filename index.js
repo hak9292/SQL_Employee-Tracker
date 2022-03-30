@@ -2,6 +2,7 @@ const express = require('express');
 const cTable = require('console.table');
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
+const { init } = require('express/lib/application');
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -40,6 +41,7 @@ const initialQuestion = [
         ]
     }
 ]
+
 let addRoleQuestions = [
     {
         name: 'roleName',
@@ -80,9 +82,6 @@ let addEmployeeQuestions = [
         choices: []
     }
 ]
-// if (answer.first3 char is add) {
-// function add(); 
-//}
 
 init = () => {
     inquirer
@@ -171,6 +170,7 @@ const addRole = () => {
         }
         addRoleQuestions[2].choices = addRoleQuestions[2].choices.concat(departmentChoices);
     });
+
     inquirer
         .prompt(addRoleQuestions)
         .then((answers) => {
@@ -210,6 +210,7 @@ const addEmployee = () => {
         }
         addEmployeeQuestions[2].choices = addEmployeeQuestions[2].choices.concat(roleNames);
     });
+
     db.query(`SELECT * FROM employee`, (err, results) => {
         let managerChoices = [];
         for (i = 0; i < results.length; i++) {
@@ -218,6 +219,7 @@ const addEmployee = () => {
         }
         addEmployeeQuestions[3].choices = addEmployeeQuestions[3].choices.concat(managerChoices);
     });
+
     inquirer
         .prompt(addEmployeeQuestions)
         .then((answers) => {
@@ -241,61 +243,15 @@ const addEmployee = () => {
                                     const params = [answers.employeeFirstName, answers.employeeLastName, answers.employeeRole, answers.employeeManager]
                                     db.query(sql, params, (err, results) => {
                                         console.log(`Added ${params} to the database.`);
+                                        init();
                                     });
                                 }
                             }
                         })
                     }
                 }
-
             })
-
         })
-
-
 }
-
-// init();
-
-// add
-// const addNew = (tableName, tableParams) => {
-//     app.post(`/api/new-${tableName}`, ({ body }, res) => {
-//         const sql = `INSERT INTO ${tableName} (${tableParams})
-//       VALUES (?)`;
-//         const params = [body.name];
-
-//         db.query(sql, params, (err, result) => {
-//             if (err) {
-//                 res.status(400).json({ error: err.message });
-//                 return;
-//             }
-//             res.json({
-//                 message: 'success',
-//                 data: body
-//             });
-//         });
-//     });
-// }
-
-// view
-
-// const viewCurrent = (tableName) => {
-//     app.get(`/api/${tableName}`, (req, res) => {
-//         const sql = `SELECT * FROM ${tableName}`;
-
-//         db.query(sql, (err, results) => {
-//             console.table(`All ${tableName}s`, results)
-//         });
-//     });
-// }
-
-// const viewCurrent = () =>
-// fetch(`/api/${tableName}`, {
-//     method: 'GET',
-
-// })
-
-
-
 
 init();
